@@ -1,0 +1,124 @@
+openapi: 3.0.3
+info:
+  title: classifier-api
+  description: Hybrid NLP classification (rules + sklearn; optional full mode). Used by dispatcher-api.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5050
+    description: Local
+  - url: http://classifier-api:5050
+    description: Docker / in-cluster service name
+
+paths:
+  /api/dispatch:
+    post:
+      summary: Classify emergency text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DispatchRequest"
+      responses:
+        "200":
+          description: Classification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DispatchResponse"
+        "400":
+          description: Missing or invalid input (e.g. empty text, text too long)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+        "500":
+          description: Classification failed (exception during inference)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassifierErrorBody"
+
+  /health:
+    get:
+      summary: Liveness
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      responses:
+        "200":
+          description: Prometheus text format
+
+components:
+  schemas:
+    DispatchRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 16000
+        conversation_id:
+          type: string
+        caller_phone:
+          type: string
+        call_sid:
+          type: string
+        allow_uncertain:
+          type: boolean
+          description: If true, model may return category `uncertain`
+
+    DispatchResponse:
+      type: object
+      properties:
+        conversation_id:
+          type: string
+        classification:
+          type: object
+          properties:
+            category:
+              type: string
+              description: e.g. police, firefighters, red_cross, uncertain
+            services:
+              type: array
+              items:
+                type: string
+            confidence:
+              type: number
+            source:
+              type: string
+            priority:
+              type: string
+        contact:
+          type: object
+        missing_fields:
+          type: array
+          items:
+            type: string
+
+    ErrorBody:
+      type: object
+      properties:
+        error:
+          type: string
+
+    ClassifierErrorBody:
+      allOf:
+        - $ref: "#/components/schemas/ErrorBody"
+        - type: object
+          properties:
+            detail:
+              type: string

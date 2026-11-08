@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lebanon Emergency Dispatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --surface2: #181c23;
+    --border: #1e2330;
+    --text: #e8eaf0;
+    --muted: #4a5068;
+    --accent: #c8102e;
+    --accent-glow: rgba(200,16,46,0.15);
+    --police: #1a6bff;
+    --police-bg: rgba(26,107,255,0.1);
+    --fire: #ff6b1a;
+    --fire-bg: rgba(255,107,26,0.1);
+    --medical: #00c97a;
+    --medical-bg: rgba(0,201,122,0.1);
+    --multi: #c81aff;
+    --multi-bg: rgba(200,26,255,0.1);
+    --critical: #c8102e;
+    --high: #ff8c00;
+    --medium: #f0c800;
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Barlow', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    animation: pulse-badge 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-badge {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(200,16,46,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(200,16,46,0); }
+  }
+
+  .logo-text {
+    font-weight: 900;
+    font-size: 15px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .logo-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .live-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--medical);
+    letter-spacing: 0.1em;
+  }
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--medical);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  .clock {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat {
+    background: var(--surface);
+    padding: 14px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .stat-value.critical { color: var(--critical); }
+  .stat-value.police { color: var(--police); }
+  .stat-value.fire { color: var(--fire); }
+  .stat-value.medical { color: var(--medical); }
+  .stat-value.total { color: var(--text); }
+
+  /* Main layout */
+  .main {
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Filter bar */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .filter-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .filter-btn {
+    padding: 6px 16px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    border-color: currentColor;
+  }
+
+  .filter-btn.active { color: var(--text); background: var(--surface2); }
+  .filter-btn.police.active { color: var(--police); border-color: var(--police); background: var(--police-bg); }
+  .filter-btn.fire.active { color: var(--fire); border-color: var(--fire); background: var(--fire-bg); }
+  .filter-btn.medical.active { color: var(--medical); border-color: var(--medical); background: var(--medical-bg); }
+  .filter-btn.critical-btn.active { color: var(--critical); border-color: var(--critical); background: var(--accent-glow); }
+
+  /* Table */
+  .table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    transition: background 0.1s;
+    cursor: pointer;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+
+  tbody tr.new-call {
+    animation: flash-in 1s ease-out;
+  }
+
+  @keyframes flash-in {
+    0% { background: rgba(200,16,46,0.2); }
+    100% { background: var(--surface); }
+  }
+
+  td {
+    padding: 14px 16px;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+  }
+
+  .badge.POLICE { color: var(--police); background: var(--police-bg); border-color: rgba(26,107,255,0.3); }
+  .badge.FIRE { color: var(--fire); background: var(--fire-bg); border-color: rgba(255,107,26,0.3); }
+  .badge.MEDICAL { color: var(--medical); background: var(--medical-bg); border-color: rgba(0,201,122,0.3); }
+  .badge.MULTI { color: var(--multi); background: var(--multi-bg); border-color: rgba(200,26,255,0.3); }
+
+  .channel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+  }
+  .channel-badge.whatsapp { color: #25D366; background: rgba(37,211,102,0.1); border-color: rgba(37,211,102,0.3); }
+  .channel-badge.voice    { color: var(--muted); background: var(--surface2); border-color: var(--border); }
+
+  .priority-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  .priority-dot.CRITICAL { background: var(--critical); box-shadow: 0 0 6px var(--critical); animation: pulse-dot 1s ease-in-out infinite; }
+  .priority-dot.HIGH { background: var(--high); }
+  .priority-dot.MEDIUM { background: var(--medium); }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .priority-text.CRITICAL { color: var(--critical); font-weight: 700; }
+  .priority-text.HIGH { color: var(--high); }
+  .priority-text.MEDIUM { color: var(--medium); }
+
+  .number {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .emergency-text {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .location-text {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .time-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .status-badge.active { color: var(--medical); background: var(--medical-bg); }
+  .status-badge.closed { color: var(--muted); background: var(--surface2); }
+  .status-badge.dispatched { color: var(--police); background: var(--police-bg); }
+
+  .services-list {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .service-chip {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 2px;
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Empty state */
+  .empty {
+    text-align: center;
+    padding: 80px 24px;
+    color: var(--muted);
+  }
+
+  .empty-icon { font-size: 40px; margin-bottom: 16px; }
+  .empty-text { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 560px;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .modal-close:hover { color: var(--text); }
+
+  .modal-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .detail-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .detail-value {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+
+  .detail-value.mono { font-family: var(--mono); font-size: 12px; }
+
+  .modal-actions {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .btn {
+    padding: 8px 20px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--muted);
+  }
+
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+  .btn-danger {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .btn-danger:hover { background: #a50d26; }
+
+  .btn-primary {
+    background: var(--police);
+    color: white;
+    border-color: var(--police);
+  }
+
+  .btn-primary:hover { background: #1258d4; }
+
+  /* Connection error */
+  .conn-error {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--accent-glow);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--critical);
+  }
+
+  .conn-error.show { display: flex; }
+
+  /* Config banner */
+  .config-banner {
+    background: rgba(255,140,0,0.1);
+    border: 1px solid rgba(255,140,0,0.3);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--high);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🚨</div>
+    <div>
+      <div class="logo-text">Emergency Dispatch</div>
+      <div class="logo-sub">Lebanon Unified Emergency Services</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="conn-error" id="connError">⚠ CONNECTION LOST</div>
+    <div class="live-indicator">
+      <div class="live-dot"></div>
+      LIVE
+    </div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-label">Total Active</div>
+    <div class="stat-value total" id="statTotal">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Critical</div>
+    <div class="stat-value critical" id="statCritical">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Police</div>
+    <div class="stat-value police" id="statPolice">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Fire</div>
+    <div class="stat-value fire" id="statFire">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Medical</div>
+    <div class="stat-value medical" id="statMedical">0</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Config warning if not set up -->
+  <div class="config-banner" id="configBanner" style="display:none">
+    ⚙ Replace SUPABASE_URL and SUPABASE_ANON_KEY at the bottom of this file before deploying.
+  </div>
+
+  <div class="filter-bar">
+    <span class="filter-label">Filter:</span>
+    <button class="filter-btn active" onclick="setFilter('ALL')">All</button>
+    <button class="filter-btn police" onclick="setFilter('POLICE')">Police</button>
+    <button class="filter-btn fire" onclick="setFilter('FIRE')">Fire</button>
+    <button class="filter-btn medical" onclick="setFilter('MEDICAL')">Medical</button>
+    <button class="filter-btn multi" onclick="setFilter('MULTI')">Multi</button>
+    <button class="filter-btn critical-btn" onclick="setFilter('CRITICAL')">⚡ Critical Only</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Priority</th>
+          <th>Category</th>
+          <th>Emergency</th>
+          <th>Location</th>
+          <th>Services</th>
+          <th>Caller</th>
+          <th>Channel</th>
+          <th>Time</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="callsBody">
+        <tr>
+          <td colspan="8">
+            <div class="empty">
+              <div class="empty-icon">📡</div>
+              <div class="empty-text">Connecting to dispatch feed...</div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Call Details</div>
+      <button class="modal-close" onclick="closeModalDirect()">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModalDirect()">Close</button>
+      <button class="btn btn-primary" onclick="dispatchCall()">Mark Dispatched</button>
+      <button class="btn btn-danger" onclick="closeCall()">Close Call</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let allCalls = [];
+let activeFilter = 'ALL';
+let selectedCall = null;
+
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-GB');
+}, 1000);
+
+async function loadCalls() {
+  try {
+    const res = await fetch('/calls');
+    if (!res.ok) throw new Error(res.statusText);
+    allCalls = await res.json();
+    render();
+  } catch (e) {
+    document.getElementById('connError').classList.add('show');
+    showEmpty('Failed to load calls.');
+  }
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  render();
+}
+
+function getFiltered() {
+  // Always exclude closed calls
+  const open = allCalls.filter(c => c.status !== 'closed');
+  if (activeFilter === 'ALL') return open;
+  if (activeFilter === 'CRITICAL') return open.filter(c => c.priority === 'CRITICAL');
+  return open.filter(c => c.services && c.services.includes(activeFilter));
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = allCalls.filter(c => c.status === 'active').length;
+  document.getElementById('statCritical').textContent = allCalls.filter(c => c.priority === 'CRITICAL').length;
+  document.getElementById('statPolice').textContent = allCalls.filter(c => c.services && c.services.includes('POLICE')).length;
+  document.getElementById('statFire').textContent = allCalls.filter(c => c.services && c.services.includes('FIRE')).length;
+  document.getElementById('statMedical').textContent = allCalls.filter(c => c.services && c.services.includes('MEDICAL')).length;
+}
+
+function formatTime(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function render() {
+  updateStats();
+  const filtered = getFiltered();
+  const tbody = document.getElementById('callsBody');
+
+  if (!filtered.length) {
+    showEmpty('No calls match the current filter.');
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(call => `
+    <tr onclick="openModal('${call.conversation_id}')" ${call._new ? `id="row-${call.conversation_id}" class="new-call"` : ''}>
+      <td>
+        <span class="priority-dot ${call.priority || ''}"></span>
+        <span class="priority-text ${call.priority || ''}">${call.priority || '—'}</span>
+      </td>
+      <td>
+        <span class="badge ${call.emergency || 'unknown'}">${call.emergency || '—'}</span>
+      </td>
+      <td>
+        <div class="emergency-text" title="${call.emergency || ''}">${call.emergency || '—'}</div>
+      </td>
+      <td>
+        <div class="location-text" title="${call.location || ''}">${call.location || '—'}</div>
+      </td>
+      <td>
+        <div class="services-list">
+          ${(call.services || []).map(s => `<span class="service-chip">${s}</span>`).join('')}
+        </div>
+      </td>
+      <td><span class="number">${call.from_number || '—'}</span></td>
+      <td><span class="channel-badge ${call.source || 'voice'}">${call.source === 'whatsapp' ? '💬 WhatsApp' : '📞 Voice'}</span></td>
+      <td><span class="time-text">${formatTime(call.started_at)}</span></td>
+      <td>
+        <span class="status-badge ${call.status || 'active'}">${call.status || 'active'}</span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function showEmpty(msg) {
+  document.getElementById('callsBody').innerHTML = `
+    <tr><td colspan="9">
+      <div class="empty">
+        <div class="empty-icon">📡</div>
+        <div class="empty-text">${msg}</div>
+      </div>
+    </td></tr>
+  `;
+}
+
+function flashNewCall(id) {
+  setTimeout(() => {
+    const row = document.getElementById(`row-${id}`);
+    if (row) row.classList.remove('new-call');
+  }, 1000);
+}
+
+function openModal(convId) {
+  selectedCall = allCalls.find(c => c.conversation_id === convId);
+  if (!selectedCall) return;
+
+  const c = selectedCall;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="detail-row">
+      <div class="detail-label">Conversation ID</div>
+      <div class="detail-value mono">${c.conversation_id}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Call SID</div>
+      <div class="detail-value mono">${c.call_sid || '—'}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Caller Number</div>
+      <div class="detail-value mono">${c.from_number || '—'}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Channel</div>
+      <div class="detail-value">
+        <span class="channel-badge ${c.source || 'voice'}">${c.source === 'whatsapp' ? '💬 WhatsApp' : '📞 Voice'}</span>
+      </div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Priority / Category</div>
+      <div class="detail-value">
+        <span class="priority-dot ${c.priority}"></span>
+        <span class="priority-text ${c.priority}">${c.priority || '—'}</span>
+        &nbsp;&nbsp;
+        <span class="badge ${c.emergency}">${c.emergency || '—'}</span>
+      </div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Emergency Description</div>
+      <div class="detail-value">${c.emergency || '—'}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Location</div>
+      <div class="detail-value">${c.location || '—'}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Services Needed</div>
+      <div class="detail-value">
+        <div class="services-list">
+          ${(c.services || []).map(s => `<span class="service-chip">${s}</span>`).join('') || '—'}
+        </div>
+      </div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Started At</div>
+      <div class="detail-value mono">${c.started_at ? new Date(c.started_at).toLocaleString('en-GB') : '—'}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Status</div>
+      <div class="detail-value">
+        <span class="status-badge ${c.status || 'active'}">${c.status || 'active'}</span>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModalDirect();
+}
+
+function closeModalDirect() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  selectedCall = null;
+}
+
+async function dispatchCall() {
+  if (!selectedCall) return;
+  await fetch(`/calls/${selectedCall.conversation_id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status: 'dispatched' }) });
+  closeModalDirect();
+  loadCalls();
+}
+
+async function closeCall() {
+  if (!selectedCall) return;
+  await fetch(`/calls/${selectedCall.conversation_id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status: 'closed' }) });
+  closeModalDirect();
+  loadCalls();
+}
+
+loadCalls();
+setInterval(loadCalls, 5000);
+</script>
+</body>
+</html>

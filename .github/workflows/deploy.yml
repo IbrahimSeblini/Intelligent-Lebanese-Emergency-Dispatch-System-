@@ -1,0 +1,96 @@
+name: Deploy to EKS
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_REGISTRY: 838054321169.dkr.ecr.eu-west-1.amazonaws.com
+  EKS_CLUSTER: dispatcher
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set changed services
+        id: changes
+        run: |
+          git diff --name-only HEAD~1 HEAD > changed_files.txt
+          cat changed_files.txt
+
+          echo "dispatcher=$(grep -q '^dispatcher-api/' changed_files.txt && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "classifier=$(grep -q '^classifier-api/' changed_files.txt && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "dashboard=$(grep -q '^dashboard/' changed_files.txt && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "whatsapp=$(grep -q '^whatsapp-bot/' changed_files.txt && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "ngrok=$(grep -q '^k8s/ngrok' changed_files.txt && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - name: Build & push dispatcher-api
+        if: steps.changes.outputs.dispatcher == 'true'
+        run: |
+          docker build -t $ECR_REGISTRY/dispatcher-api:latest ./dispatcher-api
+          docker push $ECR_REGISTRY/dispatcher-api:latest
+
+      - name: Build & push classifier-api
+        if: steps.changes.outputs.classifier == 'true'
+        run: |
+          docker build -t $ECR_REGISTRY/classifier-api:latest ./classifier-api
+          docker push $ECR_REGISTRY/classifier-api:latest
+
+      - name: Build & push dashboard
+        if: steps.changes.outputs.dashboard == 'true'
+        run: |
+          docker build -t $ECR_REGISTRY/dashboard:latest ./dashboard
+          docker push $ECR_REGISTRY/dashboard:latest
+
+      - name: Build & push whatsapp-bot
+        if: steps.changes.outputs.whatsapp == 'true'
+        run: |
+          docker build -t $ECR_REGISTRY/whatsapp-bot:latest ./whatsapp-bot
+          docker push $ECR_REGISTRY/whatsapp-bot:latest
+
+      - name: Build & push ngrok (no image build needed — apply manifest only)
+        if: steps.changes.outputs.ngrok == 'true'
+        run: echo "ngrok uses public image, manifest apply handled in restart step"
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name $EKS_CLUSTER --region $AWS_REGION
+
+      - name: Restart changed deployments
+        run: |
+          if [ "${{ steps.changes.outputs.dispatcher }}" == "true" ]; then
+            kubectl rollout restart deployment/dispatcher-api -n dispatcher
+            kubectl rollout status deployment/dispatcher-api -n dispatcher
+          fi
+          if [ "${{ steps.changes.outputs.classifier }}" == "true" ]; then
+            kubectl rollout restart deployment/classifier-api -n dispatcher
+            kubectl rollout status deployment/classifier-api -n dispatcher
+          fi
+          if [ "${{ steps.changes.outputs.dashboard }}" == "true" ]; then
+            kubectl rollout restart deployment/dashboard -n dispatcher
+            kubectl rollout status deployment/dashboard -n dispatcher
+          fi
+          if [ "${{ steps.changes.outputs.whatsapp }}" == "true" ]; then
+            kubectl rollout restart deployment/whatsapp-bot -n dispatcher
+            kubectl rollout status deployment/whatsapp-bot -n dispatcher
+          fi
+          if [ "${{ steps.changes.outputs.ngrok }}" == "true" ]; then
+            kubectl apply -f k8s/ngrok.yaml
+            kubectl rollout restart deployment/ngrok -n dispatcher
+            kubectl rollout status deployment/ngrok -n dispatcher
+          fi

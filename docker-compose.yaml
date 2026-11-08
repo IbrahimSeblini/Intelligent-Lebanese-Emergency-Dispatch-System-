@@ -1,0 +1,47 @@
+services:
+  classifier-api:
+    build: ./classifier-api
+    ports:
+      - "5050:5050"
+    environment:
+      PORT: 5050
+
+  dispatcher-api:
+    build: ./dispatcher-api
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      DB_HOST: ${RDS_HOST}
+      DB_PORT: ${RDS_PORT:-5432}
+      DB_NAME: ${RDS_NAME:-dispatcher}
+      DB_USER: ${RDS_USER}
+      DB_PASSWORD: ${RDS_PASSWORD}
+      CLASSIFIER_API_URL: http://classifier-api:5050
+    depends_on:
+      - classifier-api
+
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "8765:80"
+    depends_on:
+      - dispatcher-api
+
+  whatsapp-bot:
+    build: ./whatsapp-bot
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DISPATCHER_API_URL: http://dispatcher-api:3000
+      USE_ADVANCED_CLASSIFIER: "0"
+      GENERAL_EMERGENCY_NUMBER: "112"
+      META_ACCESS_TOKEN: ${NULL}
+      META_PHONE_NUMBER_ID: ${NULL}
+      META_VERIFY_TOKEN: ${NULL}
+      OPENAI_API_KEY: ${NULL}
+      - dispatcher-api

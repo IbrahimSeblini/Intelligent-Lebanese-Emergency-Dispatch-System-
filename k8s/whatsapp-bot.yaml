@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whatsapp-bot
+  namespace: dispatcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: whatsapp-bot
+  template:
+    metadata:
+      labels:
+        app: whatsapp-bot
+    spec:
+      containers:
+        - name: whatsapp-bot
+          image: 838054321169.dkr.ecr.eu-west-1.amazonaws.com/whatsapp-bot:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DB_HOST
+              value: "dispatcher.cn2eky6eu6et.eu-west-1.rds.amazonaws.com"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "dispatcher"
+            - name: DB_USER
+              value: "dispatcher"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dispatcher-secrets
+                  key: DB_PASSWORD
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: dispatcher-secrets
+                  key: OPENAI_API_KEY
+            - name: CLASSIFIER_API_URL
+              value: "http://classifier-api.dispatcher.svc.cluster.local:5050"
+            - name: META_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: whatsapp-secrets
+                  key: META_ACCESS_TOKEN
+            - name: META_PHONE_NUMBER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: whatsapp-secrets
+                  key: META_PHONE_NUMBER_ID
+            - name: META_VERIFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: whatsapp-secrets
+                  key: META_VERIFY_TOKEN
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: whatsapp-bot
+  namespace: dispatcher
+spec:
+  selector:
+    app: whatsapp-bot
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000

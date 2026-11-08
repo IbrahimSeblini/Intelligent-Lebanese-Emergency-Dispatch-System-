@@ -1,0 +1,5 @@
+-r requirements.txt
+transformers>=4.30.0
+torch
+sentencepiece
+sentence-transformers>=2.2.0

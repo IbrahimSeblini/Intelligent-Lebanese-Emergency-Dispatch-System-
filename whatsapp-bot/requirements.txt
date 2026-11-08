@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+httpx
+openai
+asyncpg
+transformers
+torch
+sentencepiece

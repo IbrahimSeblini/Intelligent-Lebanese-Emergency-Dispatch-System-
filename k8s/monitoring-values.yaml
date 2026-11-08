@@ -1,0 +1,39 @@
+grafana:
+  adminPassword: "NULL"
+  grafana.ini:
+    server:
+      root_url: "%(protocol)s://%(domain)s/grafana"
+      serve_from_sub_path: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 80Mi
+
+prometheus:
+  prometheusSpec:
+    retention: 3d
+    resources:
+      requests:
+        cpu: 100m
+        memory: 200Mi
+
+alertmanager:
+  enabled: false
+
+nodeExporter:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 30Mi
+
+kubeStateMetrics:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 40Mi
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 80Mi

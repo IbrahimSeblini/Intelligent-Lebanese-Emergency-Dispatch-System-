@@ -1,0 +1,49 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dispatcher-ingress
+  namespace: dispatcher
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /webhook
+            pathType: Prefix
+            backend:
+              service:
+                name: dispatcher-api
+                port:
+                  number: 3000
+          - path: /calls
+            pathType: Prefix
+            backend:
+              service:
+                name: dispatcher-api
+                port:
+                  number: 3000
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: dispatcher-api
+                port:
+                  number: 3000
+          - path: /webhooks/whatsapp
+            pathType: Prefix
+            backend:
+              service:
+                name: whatsapp-bot
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dashboard
+                port:
+                  number: 80

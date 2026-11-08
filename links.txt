@@ -1,0 +1,11 @@
+Main Dispatcher:	http://k8s-dispatch-dispatch-391c474ddf-1405760084.eu-west-1.elb.amazonaws.com/dispatch-dashboard.html
+Fire:	http://k8s-dispatch-dispatch-391c474ddf-1405760084.eu-west-1.elb.amazonaws.com/fire-dashboard.html
+Police:	http://k8s-dispatch-dispatch-391c474ddf-1405760084.eu-west-1.elb.amazonaws.com/police-dashboard.html
+Medical (Red Cross):	http://k8s-dispatch-dispatch-391c474ddf-1405760084.eu-west-1.elb.amazonaws.com/red-cross-dashboard.html
+Service Overview:	http://k8s-dispatch-dispatch-391c474ddf-1405760084.eu-west-1.elb.amazonaws.com/service-dashboard.html
+Grafana:	http://k8s-monitori-grafanai-ad04562758-1939169924.eu-west-1.elb.amazonaws.com
+Webhook (Voice/ElevenLabs):	https://preauricular-willian-clapped.ngrok-free.dev/webhook
+WhatsApp Webhook:	https://preauricular-willian-clapped.ngrok-free.dev/webhooks/whatsapp
+All Calls (API):	http://k8s-dispatch-dispatch-391c474ddf-1405760084.eu-west-1.elb.amazonaws.com/calls
+Health Check:	http://k8s-dispatch-dispatch-391c474ddf-1405760084.eu-west-1.elb.amazonaws.com/health
+Prometheus Metrics (dispatcher):	http://k8s-dispatch-dispatch-391c474ddf-1405760084.eu-west-1.elb.amazonaws.com/metrics

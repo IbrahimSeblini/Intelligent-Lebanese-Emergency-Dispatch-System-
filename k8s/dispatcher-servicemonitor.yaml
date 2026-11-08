@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dispatcher-api
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - dispatcher
+  selector:
+    matchLabels:
+      app: dispatcher-api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

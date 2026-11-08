@@ -1,0 +1,170 @@
+openapi: 3.0.3
+info:
+  title: dispatcher-api
+  description: Orchestrates webhook intake, classifier call, GPT enrichment, and PostgreSQL persistence.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Local
+  - url: http://dispatcher-api:3000
+    description: Docker / in-cluster service name
+
+paths:
+  /webhook:
+    post:
+      summary: Ingest emergency call (e.g. from voice pipeline)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookRequest"
+            examples:
+              sample:
+                value:
+                  caller_id: "+9611234567"
+                  conversation_id: "conv-uuid"
+                  emergency_description: "Fire on my floor"
+                  caller_location: "Hamra, Beirut"
+      responses:
+        "200":
+          description: Plain-text acknowledgment to the caller channel
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: help is on the way
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+        "502":
+          description: Upstream classifier error after retries (rare if degraded fallback applies)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+        "500":
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+
+  /calls:
+    get:
+      summary: List calls for dashboards
+      responses:
+        "200":
+          description: Newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CallRow"
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+
+  /calls/{conversationId}:
+    patch:
+      summary: Update call status
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 256
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchCallRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+
+  /health:
+    get:
+      summary: Liveness
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      responses:
+        "200":
+          description: Prometheus text format
+
+components:
+  schemas:
+    WebhookRequest:
+      type: object
+      required:
+        - conversation_id
+        - emergency_description
+      properties:
+        caller_id:
+          type: string
+          description: Caller identifier (e.g. phone)
+        conversation_id:
+          type: string
+          maxLength: 256
+        emergency_description:
+          type: string
+          minLength: 1
+          maxLength: 8000
+        caller_location:
+          type: string
+          maxLength: 500
+
+    PatchCallRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [active, dispatched]
+
+    CallRow:
+      type: object
+      description: Row shape from PostgreSQL (fields vary with schema migrations)
+
+    ErrorBody:
+      type: object
+      properties:
+        error:
+          type: string
