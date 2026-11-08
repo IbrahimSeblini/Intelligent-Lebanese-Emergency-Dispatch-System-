@@ -8,7 +8,7 @@ The classifier API exposes `/api/dispatch` (hybrid NLP: rules + sklearn in typic
 
 ## Using the deployed environment
 
-All URLs below match the current **[`links.txt`](links.txt)** file in this repo **BUT DO NOT WORK ANYMORE, AS THIS WAS A UNIVERSITY TEMPORARY PROJECT, LINKS ARE KEPT AS THEY ARE FOR COMPLETION**. If infrastructure or tunnels are recreated, update that file and adjust these links accordingly.
+All URLs below match the current **[`links.txt`](links.txt)** file in this repo **BUT DO NOT WORK ANYMORE, AS THIS WAS A UNIVERSITY TEMPORARY PROJECT, LINKS ARE KEPT AS THEY ARE FOR COMPLETION**.
 
 **Base URL (load balancer):**  
 `http://k8s-dispatch-dispatch-391c474ddf-1405760084.eu-west-1.elb.amazonaws.com`
